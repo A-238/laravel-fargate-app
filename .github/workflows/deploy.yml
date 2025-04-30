@@ -15,8 +15,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Configure aws credentials for prod
-            uses: aws-actions/configure-aws-credentials@v1
-            with:
-                aws-access-key-id: ${{ secrets.STG_AWS_ACCESS_KEY_ID }}
-                aws-secret-access-key: ${{ secrets.STG_AWS_SECRET_ACCESS_KEY }}
-                aws-region: ${{ env.AWS_REGION }}
+              uses: aws-actions/configure-aws-credentials@v1
+              with:
+                    aws-access-key-id: ${{ secrets.STG_AWS_ACCESS_KEY_ID }}
+                    aws-secret-access-key: ${{ secrets.STG_AWS_SECRET_ACCESS_KEY }}
+                    aws-region: ${{ env.AWS_REGION }}
