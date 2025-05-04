@@ -56,4 +56,4 @@ jobs:
         run: docker compose exec -T web npm ci
 
       - name: Build frontend
-        run: docker compose exec -T web npm run prod
+        run: docker compose exec -T web env NPM_CONFIG_CACHE=/tmp/npm-cache npm run prod
