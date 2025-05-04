@@ -1,51 +1,62 @@
 name: deploy
 
 on:
-    push:
-        branches:
-            - main
-            - feature/push_images_to_ecr
+  push:
+    branches:
+      - main
+      - feature/push_images_to_ecr
 
 env:
-    AWS_REGION: ap-northeast-1
+  AWS_REGION: ap-northeast-1
 
 jobs:
-    deploy:
-        name: Deploy app to AWS Fargate
-        runs-on: ubuntu-latest
-        steps:
-            - name: Configure aws credentials for stg
-              uses: aws-actions/configure-aws-credentials@v1
-              with:
-                    aws-access-key-id: ${{ secrets.STG_AWS_ACCESS_KEY_ID }}
-                    aws-secret-access-key: ${{ secrets.STG_AWS_SECRET_ACCESS_KEY }}
-                    aws-region: ${{ env.AWS_REGION }}
-                    role-to-assume: ${{ secrets.STG_AWS_ASSUMEROLE_ARN }}
-                    role-duration-seconds: 1800
+  deploy:
+    name: Deploy app to AWS Fargate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials for stg
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.STG_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.STG_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.STG_AWS_ASSUMEROLE_ARN }}
+          role-duration-seconds: 1800
 
-            - name: Set env vars for stg
-            # if: github.ref == 'refs/heads/main'
-            run: echo "ENV_NAME=stg" >> $GITHUB_ENV
-            - uses: actions/checkout@v2
-            - run: docker-compose up -d --build app web
-            - name: Cache composer
-              id: cache-composer
-              with:
-                path: backend/vendor
-                key: composer-1-${{ hashFiles('backend/composer.lock') }}
-            - run: docker-compose exec -T app composer install -n --prefer-dist --no-dev
-              if: ${{ !steps.cache-composer.outputs.cache-hit }}
+      - name: Set env vars for stg
+        run: echo "ENV_NAME=stg" >> $GITHUB_ENV
 
-            - name: Cache npm
-              id: cache-npm-ci
-              uses: actions/cache@v2
-              with:
-                path: backend/node_modules
-                key: npm-v1-${{ hashFiles('backend/package-lock.json') }}
-            - run: docker-compose exec -T web npm ci
-              if: ${{ !steps.cache-npm-ci.outputs.cache-hit }}
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-            - run: docker-compose exec -T web npm run prod
+      - name: Build and start containers
+        run: docker-compose up -d --build app web
+
+      - name: Cache composer
+        id: cache-composer
+        uses: actions/cache@v2
+        with:
+          path: backend/vendor
+          key: composer-1-${{ hashFiles('backend/composer.lock') }}
+
+      - name: Install PHP dependencies
+        run: docker-compose exec -T app composer install -n --prefer-dist --no-dev
+        if: ${{ !steps.cache-composer.outputs.cache-hit }}
+
+      - name: Cache npm
+        id: cache-npm-ci
+        uses: actions/cache@v2
+        with:
+          path: backend/node_modules
+          key: npm-v1-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Install Node.js dependencies
+        run: docker-compose exec -T web npm ci
+        if: ${{ !steps.cache-npm-ci.outputs.cache-hit }}
+
+      - name: Build frontend
+        run: docker-compose exec -T web npm run prod
+
               
 
 
